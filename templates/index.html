@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .spinner { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto px-4 py-8 md:py-16">
+        <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-900">AI Resume Analyzer</h1>
+                <p class="text-gray-600 mt-2">Upload a resume and paste a job description to get an instant analysis.</p>
+            </div>
+            
+            <form id="analysis-form" class="space-y-6">
+                <!-- Resume Upload -->
+                <div>
+                    <label for="resume" class="block text-lg font-semibold text-gray-700 mb-2">1. Upload Candidate's Resume</label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="resume-upload" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500"><span>Upload a file</span><input id="resume-upload" name="resume" type="file" class="sr-only" accept=".pdf" required></label>
+                                <p class="pl-1">or drag and drop</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PDF up to 10MB</p>
+                            <p id="file-name" class="text-sm font-medium text-gray-700 mt-2"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Description Text Area -->
+                <div>
+                    <label for="job_description" class="block text-lg font-semibold text-gray-700 mb-2">2. Paste Job Description</label>
+                    <textarea id="job_description" name="job_description" rows="10" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-3" placeholder="Paste the full job description here..." required></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div>
+                    <button id="submit-button" type="submit" class="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400">
+                        <span class="button-text">Analyze Now</span>
+                        <svg class="spinner animate-spin ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('resume-upload').addEventListener('change', (e) => {
+            const fileNameDisplay = document.getElementById('file-name');
+            fileNameDisplay.textContent = e.target.files.length > 0 ? `Selected: ${e.target.files[0].name}` : '';
+        });
+
+        document.getElementById('analysis-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitButton = document.getElementById('submit-button');
+            const buttonText = submitButton.querySelector('.button-text');
+            const spinner = submitButton.querySelector('.spinner');
+            
+            submitButton.disabled = true;
+            buttonText.textContent = 'Uploading...';
+            spinner.style.display = 'inline-block';
+
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+                
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    alert('File upload failed: ' + (data.error || 'Unknown error'));
+                    submitButton.disabled = false;
+                    buttonText.textContent = 'Analyze Now';
+                    spinner.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Submission error:', error);
+                alert('An error occurred during upload. Please try again.');
+                submitButton.disabled = false;
+                buttonText.textContent = 'Analyze Now';
+                spinner.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

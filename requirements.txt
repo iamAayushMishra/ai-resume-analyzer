@@ -1,0 +1,9 @@
+flask
+Flask-SocketIO
+eventlet
+google-generativeai
+python-dotenv
+chromadb
+sentence-transformers
+PyMuPDF
+markdown2

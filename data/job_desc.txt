@@ -1,0 +1,6 @@
+Minimum 5 years of experience with cloud platforms like AWS or GCP.
+Proficiency in Infrastructure as Code (Terraform).
+Strong Python scripting skills for automation.
+Experience designing and implementing CI/CD pipelines using Jenkins or GitHub Actions.
+Knowledge of containerization with Docker and Kubernetes.
+Excellent communication and team leadership skills.

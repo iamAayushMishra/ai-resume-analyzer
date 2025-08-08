@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyzing Resume...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .step-pending { opacity: 0.4; }
+        .step-active { opacity: 1; transform: scale(1.05); }
+        .step-done { opacity: 0.6; }
+        .step-done .icon-container { background-color: #10b981; } /* green-500 */
+        .step-done .icon-container .spinner { display: none; }
+        .step-done .icon-container .checkmark { display: block; }
+        .checkmark { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 md:p-12 rounded-2xl shadow-2xl w-full max-w-2xl text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Analyzing Candidate...</h1>
+        <p class="text-gray-600 mb-8">Our AI is hard at work. This may take a moment.</p>
+
+        <div id="progress-container" class="space-y-4 text-left">
+            <!-- Step 1 -->
+            <div id="step-1" class="p-4 rounded-lg flex items-center transition-all duration-300 step-pending">
+                <div class="icon-container w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-4 flex-shrink-0">
+                    <div class="spinner animate-spin h-5 w-5 text-white"></div>
+                    <div class="checkmark text-white text-xl">✓</div>
+                </div>
+                <span class="font-medium text-gray-700">Parsing and chunking resume...</span>
+            </div>
+            <!-- Step 2 -->
+            <div id="step-2" class="p-4 rounded-lg flex items-center transition-all duration-300 step-pending">
+                <div class="icon-container w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-4 flex-shrink-0">
+                    <div class="spinner animate-spin h-5 w-5 text-white"></div>
+                    <div class="checkmark text-white text-xl">✓</div>
+                </div>
+                <span class="font-medium text-gray-700">Initializing vector database...</span>
+            </div>
+            <!-- Step 3 -->
+            <div id="step-3" class="p-4 rounded-lg flex items-center transition-all duration-300 step-pending">
+                <div class="icon-container w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-4 flex-shrink-0">
+                    <div class="spinner animate-spin h-5 w-5 text-white"></div>
+                    <div class="checkmark text-white text-xl">✓</div>
+                </div>
+                <span class="font-medium text-gray-700">Generating analysis with AI...</span>
+            </div>
+            <!-- Step 4 -->
+            <div id="step-4" class="p-4 rounded-lg flex items-center transition-all duration-300 step-pending">
+                <div class="icon-container w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-4 flex-shrink-0">
+                    <div class="spinner animate-spin h-5 w-5 text-white"></div>
+                    <div class="checkmark text-white text-xl">✓</div>
+                </div>
+                <span class="font-medium text-gray-700">Finalizing report and score...</span>
+            </div>
+            <!-- Step 5 -->
+            <div id="step-5" class="p-4 rounded-lg flex items-center transition-all duration-300 step-pending">
+                <div class="icon-container w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-4 flex-shrink-0">
+                    <div class="spinner animate-spin h-5 w-5 text-white"></div>
+                    <div class="checkmark text-white text-xl">✓</div>
+                </div>
+                <span class="font-medium text-gray-700">Highlighting keywords in PDF...</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
+            const taskId = {{ task_id|tojson }};
+
+            socket.on('connect', () => {
+                console.log('Connected to server!');
+                // Send the task ID to the server to start the analysis
+                socket.emit('start_analysis', { task_id: taskId });
+            });
+
+            socket.on('status_update', (data) => {
+                console.log('Status Update:', data);
+                const currentStep = document.getElementById(`step-${data.step}`);
+                if (currentStep) {
+                    for (let i = 1; i < data.step; i++) {
+                        const prevStep = document.getElementById(`step-${i}`);
+                        if (prevStep) {
+                           prevStep.classList.remove('step-active');
+                           prevStep.classList.add('step-done');
+                        }
+                    }
+                    currentStep.classList.remove('step-pending');
+                    currentStep.classList.add('step-active');
+                    currentStep.querySelector('.icon-container').classList.add('bg-indigo-600');
+                    const spinner = currentStep.querySelector('.spinner');
+                    if (spinner) {
+                        spinner.style.border = '2px solid transparent';
+                        spinner.style.borderTop = '2px solid white';
+                    }
+                }
+            });
+
+            socket.on('analysis_complete', (data) => {
+                console.log('Analysis Complete. Redirecting...');
+                for (let i = 1; i <= 5; i++) {
+                    const step = document.getElementById(`step-${i}`);
+                    if(step) {
+                        step.classList.remove('step-active');
+                        step.classList.add('step-done');
+                    }
+                }
+                window.location.href = data.url;
+            });
+
+            socket.on('analysis_error', (data) => {
+                console.error('Analysis Error:', data.error);
+                alert(`An error occurred: ${data.error}`);
+                window.location.href = '/';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Custom scrollbar for the analysis panel */
+        .analysis-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+        .analysis-panel::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+        }
+        .analysis-panel::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* slate-300 */
+            border-radius: 4px;
+        }
+        .analysis-panel::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* slate-400 */
+        }
+
+        /* Styles for the dynamically generated report content */
+        .report-card h3 {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 600;
+            color: #0f172a; /* slate-900 */
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+        }
+        .report-card h3::before {
+            content: "✔";
+            color: #4f46e5; /* indigo-600 */
+            font-size: 1rem;
+            margin-right: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .report-card p {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            color: #475569; /* slate-600 */
+        }
+        
+        .report-card strong {
+            color: #1e293b; /* slate-800 */
+            font-weight: 600;
+        }
+        
+        .report-card code {
+            background-color: #e2e8f0; /* slate-200 */
+            color: #334155; /* slate-700 */
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+            font-weight: 500;
+        }
+        
+        .report-card hr {
+            display: none; /* Hide the original HRs */
+        }
+
+        /* Score circle animation */
+        @keyframes score-reveal {
+            from { stroke-dashoffset: 283; }
+            to { stroke-dashoffset: var(--stroke-offset, 283); }
+        }
+        .score-circle {
+            animation: score-reveal 1.5s 0.5s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div class="h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-sm p-4 flex justify-between items-center flex-shrink-0 border-b border-slate-200 z-10">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-chart-pie text-white text-xl"></i>
+                </div>
+                <h1 class="text-xl font-bold text-slate-800">Candidate Analysis Report</h1>
+            </div>
+            <a href="/" class="inline-block py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Analyze Another
+            </a>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow flex flex-col lg:flex-row overflow-hidden">
+            {% if error %}
+            <!-- Error Display -->
+            <div class="w-full flex items-center justify-center p-8">
+                <div class="max-w-md w-full bg-red-50 border-l-4 border-red-400 p-6 rounded-r-lg">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400 text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-lg font-medium text-red-800">Analysis Failed</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <p>{{ error }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Left Column: PDF Preview -->
+            <div class="w-full lg:w-1/2 flex flex-col bg-slate-200 border-r border-slate-300">
+                <div class="p-2 bg-slate-800 text-white text-center font-semibold text-sm flex-shrink-0">
+                    Resume Preview (Highlighted)
+                </div>
+                <div class="flex-grow relative">
+                    <embed src="{{ url_for('uploaded_file', filename=pdf_filename) }}" 
+                           type="application/pdf" 
+                           class="absolute inset-0 w-full h-full">
+                </div>
+            </div>
+
+            <!-- Right Column: Analysis (Scrollable) -->
+            <div class="w-full lg:w-1/2 flex-grow overflow-y-auto analysis-panel">
+                <div class="p-6 md:p-8">
+                    <!-- Scorecard Section -->
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
+                        <h2 class="text-xl font-semibold text-slate-800 mb-4 text-center">Overall Match Score</h2>
+                        <div class="relative w-40 h-40 mx-auto">
+                            <svg class="w-full h-full" viewBox="0 0 100 100">
+                                <!-- Background circle -->
+                                <circle class="text-slate-200" stroke-width="10" stroke="currentColor" fill="transparent" r="45" cx="50" cy="50" />
+                                <!-- Foreground progress circle -->
+                                <circle class="text-indigo-600 score-circle" stroke-width="10"
+                                        stroke-dasharray="283"
+                                        stroke-dashoffset="283"
+                                        stroke-linecap="round"
+                                        stroke="currentColor" fill="transparent" r="45" cx="50" cy="50"
+                                        style="transform: rotate(-90deg); transform-origin: 50% 50%; --stroke-offset: {{ 283 - (283 * (score | default(0)) / 100) }};" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span class="text-4xl font-bold text-slate-800">{{ score | default(0) }}%</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            {% if (score | default(0)) >= 85 %}
+                                <p class="font-semibold text-green-600">Excellent Match</p>
+                            {% elif (score | default(0)) >= 70 %}
+                                <p class="font-semibold text-blue-600">Good Match</p>
+                            {% elif (score | default(0)) >= 50 %}
+                                <p class="font-semibold text-amber-600">Average Match</p>
+                            {% else %}
+                                <p class="font-semibold text-red-600">Needs Improvement</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                
+                    <!-- Report Content Area -->
+                    <div class="report-content space-y-6">
+                        {{ report|safe }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if not error %}
+            // This script block only runs if there is no error.
+            const reportContent = document.querySelector('.report-content');
+            if (reportContent) {
+                // Remove the original title elements as they are now handled in the scorecard
+                const h2 = reportContent.querySelector('h2');
+                if (h2) {
+                    const candidateInfo = h2.nextElementSibling;
+                    const hr = candidateInfo ? candidateInfo.nextElementSibling : null;
+                    if (candidateInfo) candidateInfo.remove();
+                    if (hr) hr.remove();
+                    h2.remove();
+                }
+
+                // Group each requirement (h3 and its content) into a styled card
+                const fragment = document.createDocumentFragment();
+                const headings = Array.from(reportContent.querySelectorAll('h3'));
+                
+                headings.forEach(h3 => {
+                    const card = document.createElement('div');
+                    card.className = 'report-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm';
+                    
+                    const elementsForCard = [h3];
+                    let nextElement = h3.nextElementSibling;
+
+                    while (nextElement && nextElement.tagName !== 'H3') {
+                        elementsForCard.push(nextElement);
+                        nextElement = nextElement.nextElementSibling;
+                    }
+                    
+                    elementsForCard.forEach(el => card.appendChild(el));
+                    fragment.appendChild(card);
+                });
+
+                // Clear the original content and append the new cards
+                reportContent.innerHTML = '';
+                reportContent.appendChild(fragment);
+            }
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

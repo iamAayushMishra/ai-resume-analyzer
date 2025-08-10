@@ -1,0 +1,46 @@
+# Virtual environment folders
+venv/
+.venv/
+env/
+.env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Flask instance folder (contains configs, uploads, etc.)
+instance/
+
+# Logs
+*.log
+
+# Environment variable files
+.env
+*.env
+
+# Database files (SQLite)
+*.sqlite
+*.sqlite3
+
+# VS Code settings
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Pytest cache
+.pytest_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Build / distribution
+build/
+dist/
+*.egg-info/

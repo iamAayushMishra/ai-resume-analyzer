@@ -143,7 +143,7 @@ You are an expert HR analyst. Your task is to analyze a candidate's resume again
 Job Requirement: {req}
 Relevant excerpts from the candidate's resume: {context}
 Your Analysis:
-1. Provide a concise, short crisp one-paragraph analysis explaining your reasoning.
+1. Provide a concise, short crisp bullet points analysis [based on facts] explaining your reasoning.
 2. On a new line, provide a numerical confidence score like this: "Confidence Score: [score]/100".
 3. On a final new line, list the specific keywords from the resume excerpts that match the job requirement, in this format: "Keywords: [keyword1, keyword2, ...]". If no direct keywords are found, write "Keywords: []".
 """
@@ -200,6 +200,8 @@ Your Analysis:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             socketio_instance.emit('analysis_error', {'error': "An unexpected error occurred during the analysis."}, room=sid)
+
+
 
 # --- Routes ---
 @app.route('/')

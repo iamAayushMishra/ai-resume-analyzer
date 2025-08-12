@@ -22,7 +22,7 @@ uploads/
 
 # Environment variable files
 .env
-*.env
+
 
 # Database files (SQLite)
 *.sqlite

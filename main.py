@@ -84,9 +84,8 @@ def highlight_keywords_in_pdf(original_path: str, keywords: list[str]) -> str:
 def perform_analysis(socketio_instance, task_id: str):
     """
     Performs RAG-based analysis using data from the in-memory task dictionary.
-    This runs as a background task started by Socket.IO.
+    Sends live step updates to the client via Socket.IO.
     """
-    # app context for url_for or other Flask needs
     with app.app_context():
         task_data = analysis_tasks.get(task_id)
         if not task_data:
@@ -101,12 +100,14 @@ def perform_analysis(socketio_instance, task_id: str):
             # Step 1
             print("\nStep 1: Parsing and Chunking\n")
             socketio_instance.emit('status_update', {'step': 1, 'message': 'Parsing and chunking resume...'}, room=sid)
+            socketio.sleep(0)  # ✅ flush update to browser
             resume_text = parse_pdf(resume_path)
             resume_chunks = chunk_text(resume_text)
 
             # Step 2
             print("\nStep 2: Initializing Vector DB\n")
             socketio_instance.emit('status_update', {'step': 2, 'message': 'Initializing vector database...'}, room=sid)
+            socketio.sleep(0)
             client = chromadb.Client()
             if "resume_collection" in [c.name for c in client.list_collections()]:
                 client.delete_collection(name="resume_collection")
@@ -116,27 +117,26 @@ def perform_analysis(socketio_instance, task_id: str):
             # Step 3
             print("\nStep 3: Generating Analysis\n")
             socketio_instance.emit('status_update', {'step': 3, 'message': 'Generating analysis with AI...'}, room=sid)
+            socketio.sleep(0)
 
-            # Dynamic splitting of JD into requirements:
             raw_requirements = re.split(r'\n|•|-', jd_text or "")
             job_requirements = [req.strip() for req in raw_requirements if req.strip()]
 
             llm = genai.GenerativeModel(GENERATION_MODEL_NAME)
             total_score, requirements_count, detailed_analysis, all_keywords = 0, 0, "", []
 
-            # loop over each requirement and emit a per-requirement progress update
             for idx, req in enumerate(job_requirements, start=1):
                 socketio_instance.emit('status_update', {
                     'step': 3,
                     'message': f'Analyzing requirement {idx}/{len(job_requirements)}...'
                 }, room=sid)
+                socketio.sleep(0)
 
                 print(f"Processing requirement [{idx}/{len(job_requirements)}]: {req}")
                 start_time = time.time()
 
                 try:
                     results = collection.query(query_texts=[req], n_results=3)
-                    # results['documents'] is list of lists (one per query). take first query results.
                     context = "\n---\n".join(results['documents'][0]) if results and 'documents' in results and results['documents'] else ""
                     prompt = f"""
 You are an expert HR analyst. Your task is to analyze a candidate's resume against a specific job requirement.
@@ -149,14 +149,11 @@ Your Analysis:
 """
                     response = llm.generate_content(prompt)
 
-                    # guard: if API returned nothing useful, skip this req
                     if not getattr(response, "candidates", None) or not response.candidates[0].content.parts:
                         print(f"No content returned for requirement: {req}")
                         continue
 
-                    # Safely extract text
                     answer_text = response.text if hasattr(response, 'text') else ""
-                    # extract score and keywords
                     score_match = re.search(r'Confidence Score:\s*(\d{1,3})/100', answer_text)
                     if score_match:
                         total_score += int(score_match.group(1))
@@ -171,31 +168,30 @@ Your Analysis:
 
                 except Exception as e:
                     print(f"Error processing requirement '{req}': {e}")
-                    # continue to next requirement (don't crash whole analysis)
                     continue
             
-            # Step 4 finalizing
+            # Step 4
             print("\nStep 4: Finalizing Report\n")
             socketio_instance.emit('status_update', {'step': 4, 'message': 'Finalizing report and score...'}, room=sid)
+            socketio.sleep(0)
             overall_score = total_score / requirements_count if requirements_count > 0 else 0
             analysis_report = f"## 📝 Detailed Analysis\n\n**Candidate:** `{os.path.basename(resume_path)}`\n\n---\n\n{detailed_analysis}"
             html_report = markdown2.markdown(analysis_report, extras=["tables", "fenced-code-blocks", "break-on-newline"])
 
-            # Step 5 highlighting
+            # Step 5
             print("\nStep 5: Highlighting PDF\n")
             socketio_instance.emit('status_update', {'step': 5, 'message': 'Highlighting keywords in PDF...'}, room=sid)
+            socketio.sleep(0)
             highlighted_filename = highlight_keywords_in_pdf(resume_path, all_keywords)
 
-            # Store results
+            # Save results
             analysis_results[task_id] = {
                 'score': int(overall_score),
                 'report': html_report,
                 'pdf_filename': highlighted_filename
             }
 
-            # Build manual report URL (avoid url_for outside request if any)
             report_url = f"/report/{task_id}"
-            # Emit final complete event
             socketio_instance.emit('analysis_complete', {'url': report_url}, room=sid)
 
         except google_exceptions.InternalServerError as e:
@@ -204,7 +200,6 @@ Your Analysis:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
             socketio_instance.emit('analysis_error', {'error': "An unexpected error occurred during the analysis."}, room=sid)
-        # NOTE: do NOT delete analysis_tasks here — keep until report is viewed to avoid reconnect issues.
 
 # --- Routes ---
 @app.route('/')

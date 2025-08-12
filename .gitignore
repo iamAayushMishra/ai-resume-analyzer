@@ -17,6 +17,9 @@ instance/
 # Logs
 *.log
 
+#uploads
+uploads/
+
 # Environment variable files
 .env
 *.env
